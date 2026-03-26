@@ -76,9 +76,9 @@ We use **ordinary least squares (OLS)** to estimate the coefficients beacause it
 
 Anomalies are flagged based on how far the listed price deviates from the model’s expected price, relative to the usual prediction error observed in the training data. After fitting the model, we compute:
 
-\[
+$$
 z = \frac{\log(\text{price}) - \log(\text{expected\_price})}{\sigma}
-\]
+$$
 
 where `σ` is the residual standard deviation estimated on the training data. This measures how unusually high or low a listed price is relative to comparable properties in the dataset.
 
