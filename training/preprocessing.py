@@ -73,12 +73,17 @@ def run_preprocessing(csv_path: str) -> pd.DataFrame:
     df = load_and_filter_paris15(csv_path)
     df = clean_features(df)
 
+    # Derive cadastral section from parcel ID (strip last 4 digits = individual plot number)
+    # e.g. "75115000CG0058" -> "75115000CG"
+    df["section_id"] = df["id_parcelle"].str[:-4]
+
     final_features = [
         "valeur_fonciere",
         "surface_reelle_bati",
         "nombre_pieces_principales",
         "is_appartement",
         "id_parcelle",
+        "section_id",
     ]
     return df[final_features]
 

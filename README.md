@@ -49,9 +49,9 @@ Any individual considering buying or selling a property in the 15th arrondisseme
 | `surface_reelle_bati` | Living area in m² |
 | `nombre_pieces_principales` | Number of main rooms |
 | `is_appartement` | Binary flag: 1 = Appartement, 0 = Maison |
-| `id_parcelle` | Cadastral parcel ID (proxy for location) |
+| `section_id` | Cadastral section code (zone-level location proxy) |
 
-**Note on location encoding:** Prices in the northern part of the 15th arrondissement tend to be higher than in the south. We initially considered using GPS distance to the centre of Paris as a location feature, but this is impractical for end users (who cannot be expected to provide coordinates). We instead use `id_parcelle`, which uniquely identifies each land parcel and implicitly encodes spatial information. This is a deliberate design choice that preserves usability without sacrificing location signal.
+**Note on location encoding:** Prices in the northern part of the 15th arrondissement tend to be higher than in the south. We initially considered using GPS distance to the centre of Paris as a location feature, but this is impractical for end users (who cannot be expected to provide coordinates). We instead use `section_id`, derived from `id_parcelle` by stripping the last 4 digits (individual plot number) to keep only the cadastral section (zone). For example, `75115000CG0058` becomes `75115000CG`. This gives us 107 distinct zones within Paris 15e — granular enough to capture neighbourhood-level price variation, but general enough to avoid overfitting on individual buildings. Section means are smoothed toward the global average for zones with few transactions.
 
 **Target variable:** `valeur_fonciere` (transaction price in €)
 
@@ -65,7 +65,7 @@ We fit a **log-linear regression** on `log(valeur_fonciere)` using the ln of pri
 
 Formally (may be subject to change):
 ```
-log(valeur_fonciere) = b0 + b1 × surface_reelle_bati + b2 × nombre_pieces_principales + b3 × is_appartement + b4 × id_parcelle
+log(valeur_fonciere) = b0 + b1 × surface_reelle_bati + b2 × nombre_pieces_principales + b3 × is_appartement + b4 × section_location
 ```
 
 Parameters `b0 … b4` and the residual standard deviation `σ` are estimated from DVF transactions via ordinary least squares.
@@ -109,7 +109,7 @@ The API takes the key characteristics of a property together with its listed pri
 | `surface` | float | Living area in m² |
 | `nb_room` | int | Number of main rooms |
 | `property_type` | string | Property type (`Appartement` or `Maison`) |
-| `section_id` | string | Cadastral section identifier used as a proxy for location |
+| `section_id` | string | Cadastral section code (e.g. `75115000CG`), used as a zone-level location proxy |
 | `price` | float | Listed price in € |
 
 **Response:**
