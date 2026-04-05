@@ -12,7 +12,8 @@ Usage:
 
 from fastapi import FastAPI, Query
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from pydantic import ValidationError
 
 from score import load_model, score_listing
 from validate import ScoreRequest
@@ -23,6 +24,14 @@ app = FastAPI(
 )
 
 model = load_model()
+
+
+@app.exception_handler(ValidationError)
+async def validation_error_handler(request, exc):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+    )
 
 
 @app.get("/score")
