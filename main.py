@@ -28,10 +28,10 @@ model = load_model()
 
 @app.exception_handler(ValidationError)
 async def validation_error_handler(request, exc):
-    return JSONResponse(
-        status_code=422,
-        content={"detail": exc.errors()},
-    )
+    errors = []
+    for e in exc.errors():
+        errors.append({"type": e["type"], "loc": e["loc"], "msg": e["msg"]})
+    return JSONResponse(status_code=422, content={"detail": errors})
 
 
 @app.get("/score")
