@@ -64,6 +64,11 @@ def clean_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df["is_appartement"] = (df["type_local"] == "Appartement").astype(int)
 
+    # Remove price-per-m² outliers (1st and 99th percentile)
+    price_per_m2 = df["valeur_fonciere"] / df["surface_reelle_bati"]
+    p1, p99 = price_per_m2.quantile([0.01, 0.99])
+    df = df[(price_per_m2 >= p1) & (price_per_m2 <= p99)]
+
     df = df.reset_index(drop=True)
     print(f"[clean_features] {len(df)} rows after cleaning.")
     return df
