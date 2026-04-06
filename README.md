@@ -139,7 +139,28 @@ A minimal interface allows users to enter a property’s characteristics and ins
 ---
 
 ## Repository Structure
+```
+├── main.py                        # FastAPI app (endpoints: /score, /health, /)
+├── score.py                       # Inference logic (predict + anomaly scoring)
+├── validate.py                    # Pydantic input validation for /score
+├── pipeline.py                    # Train → Validate → Promote pipeline
+├── Dockerfile                     # Container definition
+├── .dockerignore
+├── requirements.txt               # Runtime dependencies
+├── requirements-train.txt         # Training dependencies
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # Runs model validation on every push to main
+├── static/
+│   └── index.html                 # Web UI
+├── artifacts/
+│   └── model.json                 # Live model (committed)
+└── training/
+    ├── preprocessing.py           # Data loading and feature engineering
+    ├── train_model.py             # Model training script
+    └── validate_model.py          # Model validation and smoke tests
 
+```
 ---
 
 ## How to Run
@@ -147,6 +168,8 @@ A minimal interface allows users to enter a property’s characteristics and ins
 ---
 
 ## Scope and Limitations
+
+The model built includes price-per-m² outlier filtering to improve estimate quality, but remains modest in accuracy. Improving prediction performance was not the goal of this project, which focused on the MLOps pipeline rather than model tuning.
 
 ---
 
