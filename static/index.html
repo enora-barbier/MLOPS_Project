@@ -1,1 +1,201 @@
-<h1>placeholder</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paris 15e — Property Valuation</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f5; color: #222; line-height: 1.5; }
+    .container { max-width: 620px; margin: 40px auto; padding: 0 20px; }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 0.9rem; margin-bottom: 24px; }
+    .card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 24px; margin-bottom: 20px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; color: #444; }
+    input, select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; margin-bottom: 14px; }
+    input:focus, select:focus { outline: none; border-color: #4a7bff; }
+    button { width: 100%; padding: 10px; background: #4a7bff; color: #fff; border: none; border-radius: 4px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    button:hover { background: #3a66dd; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    .row { display: flex; gap: 14px; }
+    .row > div { flex: 1; }
+    #results { display: none; }
+    #error { display: none; color: #c0392b; font-size: 0.9rem; margin-top: 10px; }
+    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .result-item { padding: 12px; background: #f9f9f9; border-radius: 6px; }
+    .result-item .label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.03em; }
+    .result-item .value { font-size: 1.2rem; font-weight: 700; margin-top: 2px; }
+    .result-item.wide { grid-column: 1 / -1; }
+    .label-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; }
+    .label-strongly_underpriced { background: #d4edda; color: #155724; }
+    .label-slightly_underpriced { background: #e8f5e9; color: #2e7d32; }
+    .label-fair { background: #e3f2fd; color: #1565c0; }
+    .label-slightly_overpriced { background: #fff3e0; color: #e65100; }
+    .label-strongly_overpriced { background: #fce4ec; color: #b71c1c; }
+    .score-bar-bg { width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; margin-top: 6px; }
+    .score-bar { height: 100%; border-radius: 4px; background: #4a7bff; transition: width 0.3s; }
+    .methodology { font-size: 0.8rem; color: #888; margin-top: 24px; line-height: 1.6; }
+    .methodology a { color: #4a7bff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Paris 15e &mdash; Property Valuation</h1>
+    <p class="subtitle">Estimate fair market value and detect pricing anomalies</p>
+
+    <div class="card">
+      <form id="form">
+        <div class="row">
+          <div>
+            <label for="surface">Surface (m&sup2;)</label>
+            <input type="number" id="surface" min="1" max="1000" step="1" required placeholder="e.g. 50">
+          </div>
+          <div>
+            <label for="nb_room">Rooms</label>
+            <input type="number" id="nb_room" min="0" max="50" step="1" required placeholder="e.g. 2">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="property_type">Property type</label>
+            <select id="property_type" required>
+              <option value="Appartement">Appartement</option>
+              <option value="Maison">Maison</option>
+            </select>
+          </div>
+          <div>
+            <label for="section_id">Cadastral section</label>
+            <select id="section_id" required></select>
+          </div>
+        </div>
+
+        <label for="price">Listed price (&euro;)</label>
+        <input type="number" id="price" min="1" step="1" required placeholder="e.g. 400000">
+
+        <button type="submit" id="submit-btn">Evaluate</button>
+        <div id="error"></div>
+      </form>
+    </div>
+
+    <div class="card" id="results">
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="label">Expected price</div>
+          <div class="value" id="r-expected"></div>
+        </div>
+        <div class="result-item">
+          <div class="label">Gap</div>
+          <div class="value" id="r-gap"></div>
+        </div>
+        <div class="result-item">
+          <div class="label">Verdict</div>
+          <div class="value" id="r-label"></div>
+        </div>
+        <div class="result-item">
+          <div class="label">Z-score</div>
+          <div class="value" id="r-zscore"></div>
+        </div>
+        <div class="result-item wide">
+          <div class="label">Anomaly score (1 = normal, 0 = highly unusual)</div>
+          <div class="value" id="r-score"></div>
+          <div class="score-bar-bg"><div class="score-bar" id="r-bar"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="methodology">
+      <strong>How it works:</strong> A log-linear regression model trained on
+      official DVF transaction records for the 15th arrondissement of Paris
+      predicts the expected market value. The z-score measures how far the
+      listed price deviates from comparable sales. Thresholds at &plusmn;1 and
+      &plusmn;2 standard deviations define the pricing labels.<br>
+      <a href="/docs" target="_blank">API documentation</a> &middot;
+      Data source: <a href="https://app.dvf.etalab.gouv.fr/" target="_blank">DVF (Etalab)</a>
+    </div>
+  </div>
+
+  <script>
+    // Populate section dropdown from model metadata
+    const SECTIONS = [
+      "75115000AB","75115000AC","75115000AD","75115000AE","75115000AF",
+      "75115000AG","75115000AH","75115000AI","75115000AJ","75115000AK",
+      "75115000AL","75115000AM","75115000AN","75115000AO","75115000AQ",
+      "75115000AR","75115000AV","75115000BE","75115000BF","75115000BG",
+      "75115000BH","75115000BI","75115000BJ","75115000BK","75115000BL",
+      "75115000BM","75115000BN","75115000BO","75115000BP","75115000BQ",
+      "75115000BR","75115000BS","75115000BT","75115000BU","75115000BV",
+      "75115000BW","75115000BX","75115000BY","75115000BZ","75115000CD",
+      "75115000CE","75115000CF","75115000CG","75115000CH","75115000CI",
+      "75115000CJ","75115000CK","75115000CL","75115000CM","75115000CN",
+      "75115000CO","75115000CP","75115000CR","75115000CS","75115000CT",
+      "75115000CU","75115000CV","75115000CW","75115000CX","75115000CY",
+      "75115000CZ","75115000DE","75115000DF","75115000DG","75115000DH",
+      "75115000DI","75115000DJ","75115000DK","75115000DL","75115000DM",
+      "75115000DO","75115000DP","75115000DQ","75115000DR","75115000DS",
+      "75115000DT","75115000DU","75115000DV","75115000DW","75115000DX",
+      "75115000DY","75115000DZ","75115000EF","75115000EG","75115000EH",
+      "75115000EI","75115000EJ","75115000EK","75115000EL","75115000EM",
+      "75115000EN","75115000EO","75115000EP","75115000EQ","75115000ER",
+      "75115000ES","75115000ET","75115000EU","75115000EV","75115000EX",
+      "75115000FQ","75115000FT","75115000FV","75115000FW","75115000FX",
+      "75115000FZ","75115000GH"
+    ];
+
+    const sel = document.getElementById("section_id");
+    SECTIONS.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s.slice(8); // show just the 2-letter section code
+      sel.appendChild(opt);
+    });
+
+    const fmt = n => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+
+    document.getElementById("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const errEl = document.getElementById("error");
+      const resEl = document.getElementById("results");
+      const btn = document.getElementById("submit-btn");
+      errEl.style.display = "none";
+      resEl.style.display = "none";
+      btn.disabled = true;
+      btn.textContent = "Evaluating...";
+
+      const params = new URLSearchParams({
+        surface: document.getElementById("surface").value,
+        nb_room: document.getElementById("nb_room").value,
+        property_type: document.getElementById("property_type").value,
+        section_id: document.getElementById("section_id").value,
+        price: document.getElementById("price").value,
+      });
+
+      try {
+        const resp = await fetch("/score?" + params);
+        if (!resp.ok) {
+          const body = await resp.json().catch(() => null);
+          const msg = body?.detail?.[0]?.msg || `Error ${resp.status}`;
+          throw new Error(msg);
+        }
+        const d = await resp.json();
+
+        document.getElementById("r-expected").textContent = fmt(d.expected_price);
+        const sign = d.gap_eur >= 0 ? "+" : "";
+        document.getElementById("r-gap").textContent = `${sign}${fmt(d.gap_eur)} (${sign}${d.gap_pct}%)`;
+        document.getElementById("r-label").innerHTML = `<span class="label-badge label-${d.label}">${d.label.replace(/_/g, " ")}</span>`;
+        document.getElementById("r-zscore").textContent = d.z_score.toFixed(2);
+        document.getElementById("r-score").textContent = d.score.toFixed(3);
+        document.getElementById("r-bar").style.width = (d.score * 100) + "%";
+
+        resEl.style.display = "block";
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Evaluate";
+      }
+    });
+  </script>
+</body>
+</html>
