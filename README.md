@@ -36,7 +36,7 @@ Any individual considering buying or selling a property in the 15th arrondisseme
 
 **Source:** [Explorateur de données de valeurs foncières (DVF)](https://app.dvf.etalab.gouv.fr/) — official French property transaction records.
 
-**Geographic scope:** 15th arrondissement of Paris (`code_departement = 75`), filtered by cadastral section to our zone of interest. We chose this area arbtrarily because we both live here and are curious about the pricing dynamics of this specific part of the market.
+**Geographic scope:** 15th arrondissement of Paris (`code_departement = 75`), filtered by cadastral section to our zone of interest. We chose this area arbitrarily because we both live here and are curious about the pricing dynamics of this specific part of the market.
 
 **Temporal scope:** Currently using data from 2020 onwards. We plan to restrict this to post-2023 transactions only, to avoid distortions from the COVID period and post-2022 market shifts and ensure the model reflects current conditions.
 
@@ -57,11 +57,11 @@ Any individual considering buying or selling a property in the 15th arrondisseme
 
 ---
 
-## Method (Planned)
+## Method
 
 ### Model 
 
-We fit a **log-linear regression** on `log(valeur_fonciere)` using the ln of price rather than the raw price as housing prices tend to vary proportionally rather than by constant euro amounts. using the log of price helps the model capture these proportional effects and reduces the influence of very high-priced observations.
+We fit a **log-linear regression** on `log(valeur_fonciere)` using the ln of price rather than the raw price as housing prices tend to vary proportionally rather than by constant euro amounts. Using the log of price helps the model capture these proportional effects and reduces the influence of very high-priced observations.
 
 Formally (may be subject to change):
 ```
@@ -70,7 +70,7 @@ log(valeur_fonciere) = b0 + b1 × surface_reelle_bati + b2 × nombre_pieces_prin
 
 Parameters `b0 … b4` and the residual standard deviation `σ` are estimated from DVF transactions via ordinary least squares.
 
-We use **ordinary least squares (OLS)** to estimate the coefficients beacause it is simple, interpretable, and well-suited to a dataset of this size (n ≈ 16,000). We also have prior experience with it, making implementation and debugging easier than with more complex models.
+We use **ordinary least squares (OLS)** to estimate the coefficients because it is simple, interpretable, and well-suited to a dataset of this size (n ≈ 16,000). We also have prior experience with it, making implementation and debugging easier than with more complex models.
 
 ### Anomaly detection
 
@@ -100,7 +100,7 @@ The tool is exposed as a **FastAPI** service.
 
 The API takes the key characteristics of a property together with its listed price, computes the model’s expected market value, and returns both a pricing gap and an anomaly assessment.
 
-**Planned endpoint:** `GET /score`
+**Endpoint:** `GET /score`
 
 **Parameters:**
 
@@ -164,6 +164,61 @@ A minimal interface allows users to enter a property’s characteristics and ins
 ---
 
 ## How to Run
+
+### Prerequisites
+
+- Python 3.11+
+
+### 1. Install dependencies
+
+```bash
+# Runtime (API server)
+pip install -r requirements.txt
+
+# Training (only needed to retrain the model)
+pip install -r requirements-train.txt
+```
+
+### 2. Run the API server
+
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+The API and web UI will be available at `http://localhost:8000`.
+
+### 3. Retrain the model
+
+Place a DVF CSV file at `data/dvf.csv`, then:
+
+```bash
+# Full pipeline — train, validate, and promote in one step:
+python pipeline.py retrain
+
+# Or step by step:
+python pipeline.py train       # trains a candidate → artifacts/candidate.json
+python pipeline.py validate    # validates the candidate (checks R², coefficient signs, smoke tests)
+python pipeline.py promote     # promotes the candidate → artifacts/model.json
+```
+
+If validation fails, the live model is left unchanged.
+
+To revert to the previous model:
+
+```bash
+python pipeline.py rollback
+```
+
+### 4. Run with Docker
+
+```bash
+docker build -t paris15-valuation .
+docker run --rm -p 8000:8000 paris15-valuation
+```
+
+### 5. CI
+
+Every push/PR to `main` runs `training/validate_model.py` against the committed `artifacts/model.json` via GitHub Actions.
 
 ---
 
