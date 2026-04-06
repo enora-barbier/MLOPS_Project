@@ -54,5 +54,5 @@ def score_listing(model, surface, nb_room, is_appartement, parcel_id, price):
         "gap_pct":        round((price - expected) / expected * 100, 1),
         "z_score":        round(z, 3),
         "label":          label,
-        "score":          round(max(0.0, 1 - abs(z) / 4), 3),
+        "score":          round(math.exp(-0.5 * z ** 2), 3), # Gaussian
     }
